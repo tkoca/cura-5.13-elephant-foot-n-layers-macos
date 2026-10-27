@@ -37,23 +37,25 @@ Profiles made with the Windows or Linux version work unchanged: the setting name
 
 - A Mac with Apple silicon (M1 or newer), macOS 12 Monterey or newer.
 - The official **UltiMaker Cura 5.13.0** app, installed from **`UltiMaker-Cura-5.13.0-macos-ARM64.dmg`** of the [UltiMaker Cura 5.13.0 release](https://github.com/Ultimaker/Cura/releases/tag/5.13.0) (normally `/Applications/UltiMaker Cura.app`). The installer checks Ultimaker's code signature and the SHA-256 of the affected files.
-- Nothing else: the installer uses only programs that come with macOS (`/bin/bash` 3.2, `ditto`, `codesign`, `shasum`, `plutil`). Homebrew, Python, Xcode and administrator rights are **not** needed.
+- Nothing else: the installer uses only programs that come with macOS. Homebrew, Python, Xcode, Terminal and administrator rights are **not** needed.
 - Not supported: Intel Macs and the Intel build of Cura (`…-macos-X64.dmg`).
 
 ## Install
 
-1. Download `Cura-5.13-Elephant-Foot-N-Layers-macOS-arm64.run` from [Releases](../../releases) and check that its SHA-256 matches the value in the release notes:
-   ```sh
-   shasum -a 256 ~/Downloads/Cura-5.13-Elephant-Foot-N-Layers-macOS-arm64.run
-   ```
+1. Download `Cura-5.13-Elephant-Foot-N-Layers-macOS-arm64.dmg` from [Releases](../../releases) and open it.
 2. Quit Cura.
-3. In Terminal, install (Cura is found in `/Applications` or `~/Applications`; you can also pass its location):
-   ```sh
-   bash ~/Downloads/Cura-5.13-Elephant-Foot-N-Layers-macOS-arm64.run install
-   ```
+3. Double-click **Install Elephant Foot N Layers** and confirm. Cura is found in `/Applications` or `~/Applications`.
+   - The first time, macOS says the app cannot be opened, because it is not signed with a paid Apple developer certificate. Open **System Settings > Privacy & Security**, scroll down and click **Open Anyway** next to "Install Elephant Foot N Layers", then confirm. This is needed once per app.
 4. Start **UltiMaker Cura 5.13 (Elephant Foot N Layers)** from Launchpad or Spotlight. It is in `~/Applications`.
 
-Run the file with `bash` as shown: double-clicking it does not work, because it is a script and not a signed app.
+The disk image also contains **Uninstall Elephant Foot N Layers** and a read-me.
+
+Alternatively, without the disk image, in Terminal (check the SHA-256 against the release notes first; you can pass the location of Cura.app after `install`):
+
+```sh
+shasum -a 256 ~/Downloads/Cura-5.13-Elephant-Foot-N-Layers-macOS-arm64.run
+bash ~/Downloads/Cura-5.13-Elephant-Foot-N-Layers-macOS-arm64.run install
+```
 
 How it works: the installer checks your Cura.app (Ultimaker code signature, version 5.13.0, Apple silicon build, SHA-256 of the six affected files and `Info.plist`), copies it (APFS clone: the unchanged files take no extra disk space), replaces six files in the copy, gives the copy its own name and bundle identifier and signs it again (ad hoc), because Ultimaker's signature does not cover changed content. **Your Cura.app is not changed** — you can keep using it as the normal Cura. The copy is created on your Mac, so it carries no download quarantine and opens without a Gatekeeper prompt. The installation is atomic: if anything fails, nothing is left behind (and an existing installation keeps working).
 
@@ -62,6 +64,8 @@ Both apps share your Cura profile (`~/Library/Application Support/cura/5.13`), l
 Messages are in Turkish when the language of macOS (or `LANG`) is Turkish, otherwise in English.
 
 ## Uninstall
+
+Double-click **Uninstall Elephant Foot N Layers** in the disk image and confirm. Or in Terminal:
 
 ```sh
 ~/Applications/"UltiMaker Cura 5.13 (Elephant Foot N Layers).app"/Contents/Resources/efnl/uninstall   # works without the .run file

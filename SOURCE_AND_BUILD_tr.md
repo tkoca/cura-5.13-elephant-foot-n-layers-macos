@@ -16,8 +16,9 @@
 | `scripts/check-engine.sh` | İkili denetimleri: yalnızca arm64, hedef sürüm ≤ macOS 12.0, yalnızca sistem kütüphaneleri ve `Cura.app/Contents/Frameworks` içindeki beş kütüphane, tek `LC_RPATH` `@loader_path`, geçerli imza, kullanıcı/makine adı yok |
 | `scripts/apply_patch.py`, `scripts/make_payload.py`, `scripts/make_bundle.py` | Yamaları uygular; yükü ve paketi oluşturur (deterministik tar) |
 | `scripts/build-installer.sh` | Kendini açan `.run` dosyasını `dist/` içine üretir |
+| `scripts/build-dmg.sh` | Çift tıklanan Install / Uninstall uygulamalarıyla `.dmg` dosyasını üretir (`efnl.sh --gui` çalıştıran AppleScript uygulamacıkları, `installer/app/`) |
 | `installer/` | Kurulum programı (`efnl.sh`, bash 3.2), `.run` başlığı, İngilizce/Türkçe mesajlar |
-| `tests/installer-tests.sh` | Kurulum testleri (74 denetim) |
+| `tests/installer-tests.sh` | Kurulum testleri (80 denetim) |
 | `tests/engine/` | Resmi Cura 5.13.0 motoruna karşı dilimleme testleri (26 denetim) |
 | `docs/macos-layout.md` | Resmi 5.13.0 macOS uygulamasının ölçülmüş yapısı |
 
@@ -42,9 +43,12 @@ curl -L -o Uranium-5.13.0.tar.gz    https://github.com/Ultimaker/Uranium/archive
 scripts/setup-tools.sh                                            # bir kez
 scripts/build-curaengine.sh CuraEngine-5.13.0.tar.gz out          # -> out/CuraEngine, CHECK PASS
 scripts/build-installer.sh  Cura-5.13.0.tar.gz Uranium-5.13.0.tar.gz out/CuraEngine dist
+scripts/build-dmg.sh        Cura-5.13.0.tar.gz Uranium-5.13.0.tar.gz out/CuraEngine dist
 ```
 
-Derleme tekrarlanabilirdir: iki kez derlemek aynı `CuraEngine`'i ve aynı `.run` dosyasını verir (sürüm notlarındaki SHA-256 değerleri).
+Derleme tekrarlanabilirdir: iki kez derlemek aynı `CuraEngine`'i ve aynı `.run` dosyasını verir (sürüm notlarındaki SHA-256 değerleri). `.dmg` bit bit tekrarlanabilir değildir (uygulamacık ve disk görüntüsü üst verileri), ancak kurduğu dosyalar aynıdır (`payload-SHA256SUMS.txt`).
+
+Install / Uninstall uygulamaları ad hoc imzalıdır. Ücretli bir Apple Developer ID sertifikası ve notarizasyon olmadan macOS, her uygulama için kullanıcıdan bir kez izin ister (Sistem Ayarları > Gizlilik ve Güvenlik > Yine de Aç).
 
 ## Testler
 

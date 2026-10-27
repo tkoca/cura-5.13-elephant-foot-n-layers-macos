@@ -22,7 +22,7 @@
 set -euo pipefail
 umask 022
 
-readonly VERSION="5.0.0"
+readonly VERSION="5.0.1"
 readonly ID="cura-5.13-efnl"
 readonly APP_NAME="UltiMaker Cura 5.13 (Elephant Foot N Layers).app"
 readonly BUNDLE_ID="nl.ultimaker.cura_UltiMaker_Cura"
@@ -96,8 +96,20 @@ OWN_CACHE="$SHARED_CACHE/definitions-efnl"
 # ------------------------------------------------------------------ output
 WARNINGS=()
 warn() { WARNINGS+=("$1"); }
-say() { [[ $SILENT == 1 ]] || printf '%s\n' "$1"; }
 osa_text() { local t="$1"; t="${t//\\/\\\\}"; t="${t//\"/\\\"}"; printf '%s' "$t"; }
+# Tests: EFNL_TEST_DIALOG_LOG (with EFNL_TEST_ROOT) receives the dialog texts instead of showing them.
+DIALOG_LOG=""; [[ -n "${EFNL_TEST_ROOT:-}" ]] && DIALOG_LOG="${EFNL_TEST_DIALOG_LOG:-}"
+dialog() {  # dialog <osascript command> <kind> <text>: 0 = OK/Yes
+  if [[ -n "$DIALOG_LOG" ]]; then printf '%s: %s\n' "$2" "$3" >> "$DIALOG_LOG"; return 0; fi
+  osascript -e "$1" >/dev/null 2>&1
+}
+say() {
+  [[ $SILENT == 1 ]] || printf '%s\n' "$1"
+  # Progress in --gui mode (Install/Uninstall apps of the .dmg): a notification, no button to press.
+  if [[ $GUI == 1 && $MACHINE_PART == 0 && $SILENT == 0 ]]; then
+    dialog "display notification \"$(osa_text "$1")\" with title \"$(osa_text "$(m title)")\"" progress "$1" || true
+  fi
+}
 report() {  # report <error|warning|info> <text>
   local kind="$1" text="$2"
   if [[ $SILENT == 1 || $MACHINE_PART == 1 ]]; then
@@ -106,7 +118,7 @@ report() {  # report <error|warning|info> <text>
   fi
   if [[ $GUI == 1 ]]; then
     local icon=note; [[ $kind == error ]] && icon=stop; [[ $kind == warning ]] && icon=caution
-    osascript -e "display dialog \"$(osa_text "$text")\" with title \"$(osa_text "$(m title)")\" buttons {\"OK\"} default button 1 with icon $icon" >/dev/null 2>&1 || true
+    dialog "display dialog \"$(osa_text "$text")\" with title \"$(osa_text "$(m title)")\" buttons {\"OK\"} default button 1 with icon $icon" "$kind" "$text" || true
   fi
   case "$kind" in error) printf 'ERROR: %s\n' "$text" >&2 ;; warning) printf 'WARNING: %s\n' "$text" >&2 ;; *) printf '%s\n' "$text" ;; esac
 }
@@ -114,7 +126,7 @@ die() { report error "$1"; exit 1; }
 confirm() {
   [[ $YES == 1 ]] && return 0
   if [[ $GUI == 1 ]]; then
-    osascript -e "display dialog \"$(osa_text "$1")\" with title \"$(osa_text "$(m title)")\" buttons {\"$(osa_text "$(m no)")\", \"$(osa_text "$(m yes)")\"} default button 2 cancel button 1 with icon caution" >/dev/null 2>&1
+    dialog "display dialog \"$(osa_text "$1")\" with title \"$(osa_text "$(m title)")\" buttons {\"$(osa_text "$(m no)")\", \"$(osa_text "$(m yes)")\"} default button 2 cancel button 1 with icon caution" question "$1"
     return
   fi
   [[ -t 0 ]] || return 1
@@ -311,6 +323,8 @@ EOF
   printf 'version=%s\nmode=%s\nsource=%s\ninstalled=%s\n' "$VERSION" "$mode" "$SRC_APP" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$st/info"
   printf '%s' "$manifest" > "$st/manifest"   # marks a complete installation
   chmod -R go-w "$app"
+  # Files copied from a downloaded installer (.dmg) may carry its quarantine flag; the copy must not.
+  xattr -dr com.apple.quarantine "$app" 2>/dev/null || true
 
   # The content changed, so Ultimaker's signature no longer matches the bundle: sign the copy again
   # (ad hoc, same entitlements). The unchanged frameworks keep Ultimaker's signatures.
@@ -432,7 +446,7 @@ do_uninstall() {
   if [[ $MACHINE_PART == 0 ]] && ! installed; then
     # Not installed: still clean leftovers in the profile (idempotent), like Windows.
     clean_profile || exit 1
-    say "$(m not_installed)"; finish
+    report info "$(m not_installed)"; finish
   fi
   if [[ $MACHINE_PART == 0 ]]; then confirm "$(m confirm_uninstall)" || die "$(m cancelled)"; fi
   if [[ $SYSTEM == 1 && $MACHINE_PART == 0 ]]; then

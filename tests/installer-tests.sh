@@ -62,7 +62,7 @@ check 'code signature of the copy valid (ad hoc)' 'signed_ok "$PREFIX" && [[ "$(
 check 'unchanged frameworks keep the Ultimaker signature' '[[ "$(codesign -dv "$PREFIX/Contents/Frameworks/libArcus.dylib" 2>&1)" == *TeamIdentifier=V4B3JXRRQS* ]]'
 check 'own bundle identifier and name' '[[ $(plutil -extract CFBundleIdentifier raw "$PREFIX/Contents/Info.plist") == nl.ultimaker.cura_UltiMaker_Cura.efnl && $(plutil -extract CFBundleDisplayName raw "$PREFIX/Contents/Info.plist") == "UltiMaker Cura 5.13 (Elephant Foot N Layers)" ]]'
 check 'no quarantine flag on the copy' '[[ -z "$(find "$PREFIX" -xattrname com.apple.quarantine 2>/dev/null | head -1)" ]]'
-check 'manifest + uninstaller + info' '[[ -f $PREFIX/Contents/Resources/efnl/manifest && -x $PREFIX/Contents/Resources/efnl/uninstall && $(grep -c version=5.0.0 "$PREFIX/Contents/Resources/efnl/info") == 1 ]]'
+check 'manifest + uninstaller + info' '[[ -f $PREFIX/Contents/Resources/efnl/manifest && -x $PREFIX/Contents/Resources/efnl/uninstall && $(grep -c version=5.0.1 "$PREFIX/Contents/Resources/efnl/info") == 1 ]]'
 check 'manifest lists six files + Info.plist' '[[ $(wc -l < "$PREFIX/Contents/Resources/efnl/manifest") -eq 7 ]]'
 check 'patched engine starts inside the copy (libraries from Frameworks)' '"$PREFIX/Contents/Resources/CuraEngine" help 2>&1 | grep -q "version 5.13.0"'
 check 'no staging folders left' 'nostage'
@@ -221,6 +221,22 @@ if [[ -n "$RUNFILE" ]]; then
   check 'damaged .run -> exit 1' '[[ $RC == 1 ]] && grep -q damaged "$WORK/err" && [[ ! -e $PREFIX ]]'
   check 'no temp folders left' '[[ -z "$(find "${TMPDIR:-/tmp}" -maxdepth 1 -name "cura-efnl.*" -user "$(id -u)" 2>/dev/null)" ]]'
 fi
+
+echo "T21 --gui mode (Install/Uninstall apps of the .dmg): dialogs instead of a terminal"
+reset; export EFNL_TEST_DIALOG_LOG="$WORK/dialogs"; clone_cura "$HOME/Applications/UltiMaker Cura.app"
+run install --gui
+check 'install without terminal and without --yes: exit 0' '[[ $RC == 0 ]] && same_as "$PREFIX" @P && signed_ok "$PREFIX"'
+check 'question, progress and result shown as dialogs' 'grep -q "^question: Install elephant foot" "$WORK/dialogs" && grep -q "^progress: Copying" "$WORK/dialogs" && grep -q "^info: The add-on is installed" "$WORK/dialogs"'
+: > "$WORK/dialogs"; run uninstall --gui
+check 'uninstall: exit 0, removed, result dialog' '[[ $RC == 0 && ! -e $PREFIX ]] && grep -q "^info: The add-on was removed" "$WORK/dialogs"'
+: > "$WORK/dialogs"; run uninstall --gui
+check 'uninstall when not installed: result dialog' '[[ $RC == 0 ]] && grep -q "^info: The add-on is not installed" "$WORK/dialogs"'
+mv "$HOME/Applications/UltiMaker Cura.app" "$WORK/elsewhere.app"; : > "$WORK/dialogs"; run install --gui
+check 'no Cura found: error dialog, exit 1' '[[ $RC == 1 ]] && grep -q "^error: The official UltiMaker Cura 5.13.0 app was not found" "$WORK/dialogs"'
+mkdir -p "$WORK/q"; cp -cR "$PAYLOAD" "$WORK/q/payload"; xattr -w com.apple.quarantine "0083;00000000;Safari;" "$WORK/q/payload/Frameworks/CuraEngine"
+: > "$WORK/dialogs"; EFNL_PAYLOAD_DIR="$WORK/q/payload" LANG=C /bin/bash "$EFNL" install "$CURA" --yes >/dev/null 2>&1 </dev/null; RC=$?
+check 'quarantined payload (downloaded .dmg): copy has no quarantine flag' '[[ $RC == 0 ]] && [[ -z "$(find "$PREFIX" -xattrname com.apple.quarantine 2>/dev/null | head -1)" ]] && signed_ok "$PREFIX"'
+unset EFNL_TEST_DIALOG_LOG
 
 echo "T20 official Cura.app never modified"
 check 'files, Info.plist and signature unchanged' 'cura_untouched && signed_ok "$CURA"'

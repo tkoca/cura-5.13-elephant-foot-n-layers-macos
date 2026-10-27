@@ -16,8 +16,9 @@ Everything needed to rebuild `Cura-5.13-Elephant-Foot-N-Layers-macOS-arm64.run` 
 | `scripts/check-engine.sh` | Binary checks: thin arm64, deployment target ≤ macOS 12.0, only system libraries and the five libraries of `Cura.app/Contents/Frameworks`, single `LC_RPATH` `@loader_path`, valid signature, no user/host names |
 | `scripts/apply_patch.py`, `scripts/make_payload.py`, `scripts/make_bundle.py` | Apply the patches; build the payload and the bundle (deterministic tar) |
 | `scripts/build-installer.sh` | Builds the self-extracting `.run` file into `dist/` |
+| `scripts/build-dmg.sh` | Builds the `.dmg` with the double-click Install / Uninstall apps (AppleScript applets running `efnl.sh --gui`, `installer/app/`) |
 | `installer/` | Installer (`efnl.sh`, bash 3.2), `.run` header, English/Turkish messages |
-| `tests/installer-tests.sh` | Installer tests (74 checks) |
+| `tests/installer-tests.sh` | Installer tests (80 checks) |
 | `tests/engine/` | Slicing tests (26 checks) against the official Cura 5.13.0 engine |
 | `docs/macos-layout.md` | Measured layout of the official 5.13.0 macOS app |
 
@@ -42,9 +43,12 @@ curl -L -o Uranium-5.13.0.tar.gz    https://github.com/Ultimaker/Uranium/archive
 scripts/setup-tools.sh                                            # once
 scripts/build-curaengine.sh CuraEngine-5.13.0.tar.gz out          # -> out/CuraEngine, CHECK PASS
 scripts/build-installer.sh  Cura-5.13.0.tar.gz Uranium-5.13.0.tar.gz out/CuraEngine dist
+scripts/build-dmg.sh        Cura-5.13.0.tar.gz Uranium-5.13.0.tar.gz out/CuraEngine dist
 ```
 
-The build is reproducible: building twice gives the same `CuraEngine` and the same `.run` file (same SHA-256 values as in the release notes).
+The build is reproducible: building twice gives the same `CuraEngine` and the same `.run` file (same SHA-256 values as in the release notes). The `.dmg` is not bit-for-bit reproducible (applet and disk image metadata), but the files it installs are the same (`payload-SHA256SUMS.txt`).
+
+The Install / Uninstall apps are signed ad hoc. Without a paid Apple Developer ID certificate and notarization, macOS asks the user once to allow each app (System Settings > Privacy & Security > Open Anyway).
 
 ## Tests
 
