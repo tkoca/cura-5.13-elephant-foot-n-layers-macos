@@ -1,0 +1,23 @@
+diff --git a/plugins/LocalContainerProvider/LocalContainerProvider.py b/plugins/LocalContainerProvider/LocalContainerProvider.py
+--- a/plugins/LocalContainerProvider/LocalContainerProvider.py
++++ b/plugins/LocalContainerProvider/LocalContainerProvider.py
+@@ -251,7 +251,9 @@
+ 
+         definition_path = self._id_to_path[definition_id]
+         try:
+-            cache_path = Resources.getPath(Resources.Cache, "definitions", Application.getInstance().getVersion(), definition_id)
++            # Elephant Foot N Layers (macOS): own cache folder, so that this patched copy and the unmodified
++            # Cura.app (same cache folder on macOS) never load each other's cached fdmprinter definition.
++            cache_path = Resources.getPath(Resources.Cache, "definitions-efnl", Application.getInstance().getVersion(), definition_id)
+             cache_mtime = os.path.getmtime(cache_path)
+             definition_mtime = os.path.getmtime(definition_path)
+         except FileNotFoundError:  # Cache doesn't exist yet.
+@@ -293,7 +295,7 @@
+         :param definition: The definition container to store.
+         """
+ 
+-        cache_path = Resources.getStoragePath(Resources.Cache, "definitions", Application.getInstance().getVersion(), definition.id)
++        cache_path = Resources.getStoragePath(Resources.Cache, "definitions-efnl", Application.getInstance().getVersion(), definition.id)  # see _loadCachedDefinition
+ 
+         # Ensure the cache path exists.
+         try:
